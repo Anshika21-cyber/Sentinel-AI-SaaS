@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import type { MouseEvent } from 'react';
+import { motion } from 'framer-motion';
 import {
   AreaChart,
   Area,
@@ -33,14 +34,82 @@ import {
   Bell,
 } from 'lucide-react';
 import { Eyebrow, Reveal, RiskBadge, StaggerGroup, StaggerItem } from '@/components/ui/Primitives';
-import { kpis, weeklyIncidents, riskDistribution, hourlyRisk, activityFeed, trendingAreas } from '@/data/content';
+import { weeklyIncidents, riskDistribution, hourlyRisk, activityFeed, trendingAreas } from '@/data/content';
 import { useCountUp } from '@/lib/useCountUp';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
-const kpiIcons: Record<string, typeof FileText> = { FileText, Siren, Flame, Gauge };
 const feedIcons: Record<string, typeof Activity> = { prediction: Activity, report: FileText, resolve: CheckCircle2, alert: Siren };
 
 export function DashboardPage() {
+  const [reportsData, setReportsData] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      const { data, error } = await supabase.from('reports').select('*');
+      if (error) {
+        console.error('Error fetching dashboard reports:', error);
+        return;
+      }
+      if (data) {
+        setReportsData(data);
+      }
+    };
+    fetchDashboardStats();
+  }, []);
+
+  const totalReports = reportsData.length;
+  const verifiedReports = reportsData.filter(
+    (r) => r.verified === true || (r.trust_score ?? r.trustScore ?? 50) >= 70
+  ).length;
+
+  const distinctAreas = new Set(
+    reportsData
+      .map((r) => (r.area || '').trim().toLowerCase())
+      .filter((a) => a.length > 0)
+  ).size;
+
+  const avgTrustScore =
+    reportsData.length > 0
+      ? Math.round(
+          reportsData.reduce(
+            (acc, r) => acc + Number(r.trust_score ?? r.trustScore ?? 50),
+            0
+          ) / reportsData.length
+        )
+      : 0;
+
+  const liveKpis = [
+    {
+      id: 'total-reports',
+      label: 'Total Reports',
+      value: totalReports,
+      suffix: '',
+      icon: FileText,
+    },
+    {
+      id: 'verified-reports',
+      label: 'Verified Reports',
+      value: verifiedReports,
+      suffix: '',
+      icon: CheckCircle2,
+    },
+    {
+      id: 'areas-covered',
+      label: 'Areas Covered',
+      value: distinctAreas,
+      suffix: '',
+      icon: MapPin,
+    },
+    {
+      id: 'avg-trust-score',
+      label: 'Avg Trust Score',
+      value: avgTrustScore,
+      suffix: '',
+      icon: Gauge,
+    },
+  ];
+
   return (
     <div className="relative min-h-screen pt-24">
       <div className="mx-auto max-w-7xl px-6 pt-8 md:px-10">
@@ -72,12 +141,11 @@ export function DashboardPage() {
       <div className="mx-auto mt-8 max-w-7xl space-y-5 px-6 pb-20 md:px-10">
         {/* KPI cards */}
         <StaggerGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {kpis.map((k) => {
-            const Icon = kpiIcons[k.icon] ?? FileText;
-            const up = k.trend === 'up';
+          {liveKpis.map((k) => {
+            const Icon = k.icon;
             return (
               <StaggerItem key={k.id}>
-                <KpiCard icon={<Icon className="h-5 w-5 text-primary" />} label={k.label} value={k.value} suffix={k.suffix ?? ''} delta={k.delta} up={up} />
+                <KpiCard icon={<Icon className="h-5 w-5 text-primary" />} label={k.label} value={k.value} suffix={k.suffix} />
               </StaggerItem>
             );
           })}
@@ -326,28 +394,34 @@ function KpiCard({
   icon,
   label,
   value,
-  suffix,
+  suffix = '',
   delta,
-  up,
+  up = true,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
-  suffix: string;
-  delta: number;
-  up: boolean;
+  suffix?: string;
+  delta?: number;
+  up?: boolean;
 }) {
   const { ref, display } = useCountUp(value, 1600, suffix === '%' ? 1 : 0);
   return (
     <div ref={ref} className="card spotlight glow-ring p-5" onMouseMove={spotlightMove}>
       <div className="flex items-center justify-between">
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/5">{icon}</div>
-        <span className={cn('flex items-center gap-1 text-xs font-semibold', up ? 'text-success' : 'text-warning')}>
-          {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-          {delta > 0 ? '+' : ''}
-          {delta}
-          {suffix === '%' ? '%' : ''}
-        </span>
+        {delta !== undefined ? (
+          <span className={cn('flex items-center gap-1 text-xs font-semibold', up ? 'text-success' : 'text-warning')}>
+            {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+            {delta > 0 ? '+' : ''}
+            {delta}
+            {suffix === '%' ? '%' : ''}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+            Live Data
+          </span>
+        )}
       </div>
       <p className="mt-4 text-3xl font-semibold tracking-tight text-ink tnum">
         {display}

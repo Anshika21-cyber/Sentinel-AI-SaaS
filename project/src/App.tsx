@@ -5,7 +5,6 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { AuroraBackground } from '@/components/AuroraBackground';
 import { ParticleField } from '@/components/ParticleField';
-import { FloatingNotifications } from '@/components/FloatingNotifications';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { LandingPage } from '@/pages/LandingPage';
 
@@ -63,7 +62,6 @@ function App() {
             <AnimatedRoutes />
           </main>
           <Footer />
-          <FloatingNotifications />
         </div>
       </div>
     </BrowserRouter>

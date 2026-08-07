@@ -44,6 +44,7 @@ export interface ReportItem {
   endorsements: number;
   photo: string;
   description: string;
+  explanation?: string;
 }
 
 export interface Hotspot {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload,
@@ -13,18 +13,76 @@ import {
   ThumbsUp,
   MapPin,
   Clock,
+  Activity,
 } from 'lucide-react';
 import { Eyebrow, RiskBadge, Card } from '@/components/ui/Primitives';
-import { reports, trendingAreas, type ReportItem } from '@/data/content';
+import { trendingAreas, type ReportItem } from '@/data/content';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 const categories = ['All', 'Theft', 'Harassment', 'Nuisance', 'Lighting', 'Traffic', 'Suspicious'];
 
 export function CommunityPage() {
   const [filter, setFilter] = useState('All');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [reportsList, setReportsList] = useState<ReportItem[]>([]);
 
-  const filtered = filter === 'All' ? reports : reports.filter((r) => r.category === filter);
+  const fetchReports = async () => {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching reports:', error);
+      return;
+    }
+
+    if (data) {
+      const rawReports = data.map((item: any) => {
+        const trustScore = item.trust_score ?? item.trustScore ?? 50;
+        const verified = typeof item.verified === 'boolean' ? item.verified : trustScore >= 70;
+        return {
+          id: item.id ? String(item.id) : Math.random().toString(),
+          title: item.title || '',
+          area: item.area || '',
+          category: item.category || 'Theft',
+          severity: item.severity || 'low',
+          trustScore: Number(trustScore),
+          reporter: item.reporter || 'Community Member',
+          time: item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+          verified,
+          endorsements: item.endorsements ?? 0,
+          photo: item.photo_url || item.photo || 'https://images.pexels.com/photos/2168974/pexels-photo-2168974.jpeg?auto=compress&cs=tinysrgb&w=900',
+          description: item.description || item.title || '',
+        };
+      });
+
+      const mapped: ReportItem[] = rawReports.map((r, _, arr) => {
+        const otherCount = arr.filter(
+          (other) => other.id !== r.id && (other.area || '').trim().toLowerCase() === (r.area || '').trim().toLowerCase()
+        ).length;
+
+        let explanation = 'New report — awaiting cross-validation';
+        if (otherCount > 0) {
+          explanation = `Cross-validated with ${otherCount} other report${otherCount > 1 ? 's' : ''} in this area`;
+        }
+
+        return {
+          ...r,
+          explanation,
+        };
+      });
+
+      setReportsList(mapped);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const filtered = filter === 'All' ? reportsList : reportsList.filter((r) => r.category === filter);
 
   return (
     <div className="relative min-h-screen pt-24">
@@ -141,7 +199,7 @@ export function CommunityPage() {
           <Card hover={false}>
             <h3 className="text-sm font-semibold text-ink">Recent reports</h3>
             <div className="mt-4 space-y-3">
-              {reports.slice(0, 3).map((r) => (
+              {reportsList.slice(0, 3).map((r) => (
                 <div key={r.id} className="flex items-center gap-3">
                   <img src={r.photo} alt="" className="h-10 w-10 rounded-lg object-cover" loading="lazy" />
                   <div className="min-w-0 flex-1">
@@ -157,7 +215,7 @@ export function CommunityPage() {
       </div>
 
       {/* Upload modal */}
-      <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} />
+      <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onSuccess={fetchReports} />
     </div>
   );
 }
@@ -194,6 +252,14 @@ function ReportCard({ report }: { report: ReportItem }) {
 
           <p className="mt-2.5 text-sm leading-relaxed text-ink-muted">{report.description}</p>
 
+          {/* Explanation badge */}
+          {report.explanation && (
+            <div className="mt-3 flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary">
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+              <span>{report.explanation}</span>
+            </div>
+          )}
+
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-faint">
             <span className="flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5" /> {report.area}
@@ -218,7 +284,7 @@ function ReportCard({ report }: { report: ReportItem }) {
                     cy="18"
                     r="15"
                     fill="none"
-                    stroke={report.trustScore >= 80 ? '#22C55E' : report.trustScore >= 60 ? '#F59E0B' : '#EF4444'}
+                    stroke={report.trustScore >= 70 ? '#22C55E' : report.trustScore >= 60 ? '#F59E0B' : '#EF4444'}
                     strokeWidth="3"
                     strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 15}
@@ -229,7 +295,9 @@ function ReportCard({ report }: { report: ReportItem }) {
               </div>
               <div>
                 <p className="text-[11px] font-semibold text-ink">Trust score</p>
-                <p className="text-[10px] text-ink-faint">{report.trustScore >= 80 ? 'High reputation' : report.trustScore >= 60 ? 'Moderate' : 'Low · pending'}</p>
+                <p className="text-[10px] text-ink-faint">
+                  {report.trustScore >= 80 ? 'High reputation' : report.trustScore >= 70 ? 'Verified' : report.trustScore >= 60 ? 'Moderate' : 'Low · pending'}
+                </p>
               </div>
             </div>
 
@@ -253,10 +321,132 @@ function ReportCard({ report }: { report: ReportItem }) {
   );
 }
 
-function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function UploadModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess?: () => void }) {
+  const [title, setTitle] = useState('');
+  const [area, setArea] = useState('');
   const [category, setCategory] = useState('Theft');
   const [severity, setSeverity] = useState('moderate');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const localUrl = URL.createObjectURL(file);
+    setPhotoPreview(localUrl);
+
+    try {
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('report-photos')
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        alert(`Storage upload error: ${uploadError.message}`);
+        setPhotoPreview(null);
+        setPhotoUrl(null);
+        setUploading(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('report-photos')
+        .getPublicUrl(filePath);
+
+      if (publicUrlData?.publicUrl) {
+        setPhotoUrl(publicUrlData.publicUrl);
+        setPhotoPreview(publicUrlData.publicUrl);
+      }
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      alert(`Upload failed: ${err?.message || err}`);
+      setPhotoPreview(null);
+      setPhotoUrl(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+
+    try {
+      // 1. Query existing reports in the same area within last 48 hours
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      const { data: existingAreaReports } = await supabase
+        .from('reports')
+        .select('*')
+        .ilike('area', area.trim())
+        .gte('created_at', fortyEightHoursAgo);
+
+      // 2. Compute credibility score
+      let computedTrustScore = 50;
+      const matchCount = existingAreaReports ? existingAreaReports.length : 0;
+
+      if (matchCount === 1) {
+        computedTrustScore += 15;
+      } else if (matchCount >= 2) {
+        computedTrustScore += 25;
+      }
+
+      const hasCategoryMatch = existingAreaReports?.some(
+        (r: any) => (r.category || '').toLowerCase() === category.toLowerCase()
+      );
+      if (hasCategoryMatch) {
+        computedTrustScore += 10;
+      }
+
+      computedTrustScore = Math.min(95, computedTrustScore);
+
+      // 3. Set verified status
+      const isVerified = computedTrustScore >= 70;
+
+      // 4. Insert into database with computed values
+      const { error } = await supabase.from('reports').insert([
+        {
+          title,
+          area,
+          category,
+          severity,
+          photo_url: photoUrl || '',
+          trust_score: computedTrustScore,
+          verified: isVerified,
+        },
+      ]);
+
+      if (error) {
+        console.error('Submit report error:', error);
+        alert(`Failed to submit report: ${error.message}`);
+      } else {
+        setTitle('');
+        setArea('');
+        setCategory('Theft');
+        setSeverity('moderate');
+        setPhotoPreview(null);
+        setPhotoUrl(null);
+        if (onSuccess) onSuccess();
+        onClose();
+      }
+    } catch (err: any) {
+      console.error('Error inserting report:', err);
+      alert(`Error inserting report: ${err?.message || err}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -287,11 +477,22 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
             {/* Photo upload */}
             <div className="mt-5">
               <label className="text-xs font-medium uppercase tracking-wider text-ink-faint">Photo evidence</label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
               {photoPreview ? (
                 <div className="relative mt-2 overflow-hidden rounded-xl">
                   <img src={photoPreview} alt="preview" className="h-44 w-full object-cover" />
                   <button
-                    onClick={() => setPhotoPreview(null)}
+                    onClick={() => {
+                      setPhotoPreview(null);
+                      setPhotoUrl(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
                     className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-lg bg-black/60 text-white"
                   >
                     <X className="h-4 w-4" />
@@ -299,11 +500,13 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                 </div>
               ) : (
                 <button
-                  onClick={() => setPhotoPreview('https://images.pexels.com/photos/2168974/pexels-photo-2168974.jpeg?auto=compress&cs=tinysrgb&w=900')}
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
                   className="mt-2 flex h-32 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] text-ink-faint transition-colors hover:border-primary/40 hover:text-ink-muted"
                 >
                   <ImagePlus className="h-6 w-6" />
-                  <span className="text-xs">Click to attach a photo</span>
+                  <span className="text-xs">{uploading ? 'Uploading...' : 'Click to attach a photo'}</span>
                 </button>
               )}
             </div>
@@ -312,6 +515,8 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
             <div className="mt-5">
               <label className="text-xs font-medium uppercase tracking-wider text-ink-faint">What happened</label>
               <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="Brief description of the incident..."
                 className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 text-sm text-ink outline-none focus:border-primary/50"
               />
@@ -321,6 +526,8 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
             <div className="mt-4">
               <label className="text-xs font-medium uppercase tracking-wider text-ink-faint">Location / area</label>
               <input
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
                 placeholder="e.g. Lantern Ave · Block 14"
                 className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5 text-sm text-ink outline-none focus:border-primary/50"
               />
@@ -334,6 +541,7 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                   {['Theft', 'Harassment', 'Nuisance', 'Lighting'].map((c) => (
                     <button
                       key={c}
+                      type="button"
                       onClick={() => setCategory(c)}
                       className={cn(
                         'rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all',
@@ -351,6 +559,7 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
                   {['low', 'moderate', 'high'].map((s) => (
                     <button
                       key={s}
+                      type="button"
                       onClick={() => setSeverity(s)}
                       className={cn(
                         'rounded-lg border px-2.5 py-1 text-[11px] font-medium capitalize transition-all',
@@ -364,9 +573,14 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
               </div>
             </div>
 
-            <button className="mt-6 btn-primary w-full" onClick={onClose}>
+            <button
+              type="button"
+              className="mt-6 btn-primary w-full"
+              onClick={handleSubmit}
+              disabled={submitting || uploading}
+            >
               <Upload className="h-4 w-4" />
-              Submit report
+              {submitting ? 'Submitting...' : 'Submit report'}
             </button>
           </motion.div>
         </motion.div>
@@ -374,3 +588,4 @@ function UploadModal({ open, onClose }: { open: boolean; onClose: () => void }) 
     </AnimatePresence>
   );
 }
+
