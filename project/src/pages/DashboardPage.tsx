@@ -248,7 +248,7 @@ export function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-semibold text-ink">Live Risk Score</h3>
-                    <p className="mt-1 text-xs text-ink-faint">Heuristic forecast — time-based</p>
+                    <p className="mt-1 text-xs text-ink-faint">Signal-weighted forecast with reliability and time context</p>
                   </div>
                   <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                     Live Data
@@ -259,7 +259,7 @@ export function DashboardPage() {
                     <p className="text-xs text-ink-faint">No reports yet to compute activity risk.</p>
                   ) : (
                     areaRisks.map((areaRisk) => {
-                      const forecast = computeForecast(areaRisk.score);
+                      const forecast = computeForecast(areaRisk);
                       const scoreClasses =
                         areaRisk.score < 34
                           ? 'border-success/30 bg-success/10 text-success'
