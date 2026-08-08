@@ -1,4 +1,4 @@
-import type { ReportItem } from '@/data/content';
+import type { ReportItem, RiskLevel } from '@/data/content';
 
 export interface AreaRisk {
   area: string;
@@ -7,10 +7,59 @@ export interface AreaRisk {
   breakdown: string;
 }
 
+export interface AreaSummary {
+  counts: Record<RiskLevel, number>;
+  totalWeight: number;
+  totalReports: number;
+  severity: RiskLevel;
+}
+
 export interface ForecastResult {
   forecastScore: number;
   direction: 'up' | 'stable';
   reason: string;
+}
+
+const severityRank: RiskLevel[] = ['critical', 'high', 'moderate', 'low'];
+
+function determineSeverity(counts: Record<RiskLevel, number>): RiskLevel {
+  for (const level of severityRank) {
+    if (counts[level] > 0) {
+      return level;
+    }
+  }
+  return 'low';
+}
+
+export function groupReportsByArea(reports: ReportItem[]): Record<string, AreaSummary> {
+  const areaMap: Record<string, AreaSummary> = {};
+
+  reports.forEach((r) => {
+    const areaName = r.area?.trim() || 'Unknown Area';
+    if (!areaMap[areaName]) {
+      areaMap[areaName] = {
+        counts: { low: 0, moderate: 0, high: 0, critical: 0 },
+        totalWeight: 0,
+        totalReports: 0,
+        severity: 'low',
+      };
+    }
+
+    const sev = (r.severity || 'low').toLowerCase() as RiskLevel;
+    let weight = 1;
+    if (sev === 'moderate') weight = 2;
+    else if (sev === 'high' || sev === 'critical') weight = 3;
+
+    areaMap[areaName].counts[sev] += 1;
+    areaMap[areaName].totalWeight += weight;
+    areaMap[areaName].totalReports += 1;
+  });
+
+  Object.values(areaMap).forEach((entry) => {
+    entry.severity = determineSeverity(entry.counts);
+  });
+
+  return areaMap;
 }
 
 export function computeForecast(areaRiskScore: number, currentHour: number = new Date().getHours()): ForecastResult {
@@ -30,22 +79,7 @@ export function computeForecast(areaRiskScore: number, currentHour: number = new
 }
 
 export function computeAreaRisk(reports: ReportItem[]): AreaRisk[] {
-  const areaMap: Record<string, { counts: Record<string, number>; totalWeight: number; totalReports: number }> = {};
-
-  reports.forEach((r) => {
-    const areaName = r.area?.trim() || 'Unknown Area';
-    if (!areaMap[areaName]) {
-      areaMap[areaName] = { counts: { low: 0, moderate: 0, high: 0, critical: 0 }, totalWeight: 0, totalReports: 0 };
-    }
-    const sev = (r.severity || 'low').toLowerCase();
-    let weight = 1;
-    if (sev === 'moderate') weight = 2;
-    else if (sev === 'high' || sev === 'critical') weight = 3;
-
-    areaMap[areaName].counts[sev] = (areaMap[areaName].counts[sev] || 0) + 1;
-    areaMap[areaName].totalWeight += weight;
-    areaMap[areaName].totalReports += 1;
-  });
+  const areaMap = groupReportsByArea(reports);
 
   return Object.entries(areaMap)
     .map(([area, data]) => {

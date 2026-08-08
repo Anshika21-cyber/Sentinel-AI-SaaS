@@ -16,16 +16,26 @@ import {
   Activity,
 } from 'lucide-react';
 import { Eyebrow, RiskBadge, Card } from '@/components/ui/Primitives';
-import { trendingAreas, type ReportItem } from '@/data/content';
+import { type ReportItem, type RiskLevel } from '@/data/content';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { groupReportsByArea } from '@/lib/riskEngine';
 
-const categories = ['All', 'Theft', 'Harassment', 'Nuisance', 'Lighting', 'Traffic', 'Suspicious'];
+const categories = ['All', 'Theft', 'Harassment', 'Nuisance', 'Lighting', 'Traffic', 'Suspicious'] as const;
+
+interface TrendingArea {
+  area: string;
+  severity: RiskLevel;
+  trend: 'up' | 'down';
+  change: string;
+  recentCount: number;
+}
 
 export function CommunityPage() {
   const [filter, setFilter] = useState('All');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [reportsList, setReportsList] = useState<ReportItem[]>([]);
+  const [trendingAreas, setTrendingAreas] = useState<TrendingArea[]>([]);
 
   const fetchReports = async () => {
     const { data, error } = await supabase
@@ -39,9 +49,13 @@ export function CommunityPage() {
     }
 
     if (data) {
-      const rawReports = data.map((item: any) => {
+      type ReportWithDate = ReportItem & { createdAt: Date };
+
+      const rawReports = data.map((item: any): ReportWithDate => {
         const trustScore = item.trust_score ?? item.trustScore ?? 50;
         const verified = typeof item.verified === 'boolean' ? item.verified : trustScore >= 70;
+        const createdAt = item.created_at ? new Date(item.created_at) : new Date();
+
         return {
           id: item.id ? String(item.id) : Math.random().toString(),
           title: item.title || '',
@@ -50,15 +64,67 @@ export function CommunityPage() {
           severity: item.severity || 'low',
           trustScore: Number(trustScore),
           reporter: item.reporter || 'Community Member',
-          time: item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+          time: createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           verified,
           endorsements: item.endorsements ?? 0,
           photo: item.photo_url || item.photo || 'https://images.pexels.com/photos/2168974/pexels-photo-2168974.jpeg?auto=compress&cs=tinysrgb&w=900',
           description: item.description || item.title || '',
+          createdAt,
         };
       });
 
-      const mapped: ReportItem[] = rawReports.map((r, _, arr) => {
+      const buildTrendingAreas = () => {
+        const now = Date.now();
+        const recent24h = new Date(now - 24 * 60 * 60 * 1000);
+        const previous24h = new Date(now - 48 * 60 * 60 * 1000);
+
+        const areaSummaries = groupReportsByArea(rawReports);
+        const areaCounts: Record<string, { recent: number; previous: number }> = {};
+
+        rawReports.forEach((report) => {
+          const areaName = report.area?.trim() || 'Unknown Area';
+          if (!areaCounts[areaName]) {
+            areaCounts[areaName] = { recent: 0, previous: 0 };
+          }
+
+          if (report.createdAt >= recent24h) {
+            areaCounts[areaName].recent += 1;
+          } else if (report.createdAt >= previous24h) {
+            areaCounts[areaName].previous += 1;
+          }
+        });
+
+        return Object.entries(areaSummaries)
+          .map(([area, summary]) => {
+            const counts = areaCounts[area] || { recent: 0, previous: 0 };
+            if (counts.recent === 0) {
+              return null;
+            }
+
+            const percentChange = counts.previous === 0
+              ? null
+              : Math.round(((counts.recent - counts.previous) / counts.previous) * 100);
+            const change = counts.previous === 0
+              ? 'new'
+              : `${percentChange! >= 0 ? '+' : ''}${percentChange}%`;
+            const trend: 'up' | 'down' = counts.previous === 0 || counts.recent >= counts.previous ? 'up' : 'down';
+
+            return {
+              area,
+              severity: summary.severity,
+              trend,
+              change,
+              recentCount: counts.recent,
+            };
+          })
+          .filter((item): item is TrendingArea => item !== null)
+          .sort((a, b) => b.recentCount - a.recentCount || a.area.localeCompare(b.area))
+          .slice(0, 5);
+      };
+
+      setTrendingAreas(buildTrendingAreas());
+
+      const mapped: ReportItem[] = rawReports.map(({ createdAt, ...r }, _, arr) => {
         const otherCount = arr.filter(
           (other) => other.id !== r.id && (other.area || '').trim().toLowerCase() === (r.area || '').trim().toLowerCase()
         ).length;
