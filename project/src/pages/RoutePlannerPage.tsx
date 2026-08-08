@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Navigation,
@@ -16,20 +16,26 @@ import {
 } from 'lucide-react';
 import { Eyebrow, RiskBadge, Reveal } from '@/components/ui/Primitives';
 import { AnimatedMapCanvas } from '@/components/AnimatedMapCanvas';
-import { routeOptions } from '@/data/content';
+import { getRouteLocation, getRouteOptions } from '@/services/safety';
 import { cn } from '@/lib/utils';
 
 export function RoutePlannerPage() {
-  const [origin, setOrigin] = useState('Current location · Wellington & 5th');
-  const [destination, setDestination] = useState('Harbor Walk · Pier 3');
+  const [origin, setOrigin] = useState('Noida');
+  const [destination, setDestination] = useState('Gurugram');
   const [activeId, setActiveId] = useState('safest');
   const [planning, setPlanning] = useState(false);
 
-  const active = routeOptions.find((r) => r.id === activeId)!;
+  const originLocation = useMemo(() => getRouteLocation(origin), [origin]);
+  const destinationLocation = useMemo(() => getRouteLocation(destination), [destination]);
+  const routeOptions = useMemo(() => getRouteOptions(origin, destination), [origin, destination]);
+  const originSupported = Boolean(originLocation);
+  const destinationSupported = Boolean(destinationLocation);
+  const routeUnavailable = !originSupported || !destinationSupported || routeOptions.length === 0;
+  const active = routeOptions.length > 0 ? routeOptions.find((r) => r.id === activeId) ?? routeOptions[0] : null;
 
   const plan = () => {
     setPlanning(true);
-    setTimeout(() => setPlanning(false), 1200);
+    setTimeout(() => setPlanning(false), 1000);
   };
 
   return (
@@ -155,21 +161,39 @@ export function RoutePlannerPage() {
         {/* Right: map + AI reasoning */}
         <div className="space-y-5">
           <div className="relative rounded-3xl border border-white/10 glass-card p-2 shadow-soft-lg">
-            <AnimatedMapCanvas className="aspect-[4/3] w-full" showRoute showHeat />
+            <AnimatedMapCanvas
+              className="aspect-[4/3] w-full"
+              showRoute={!routeUnavailable}
+              showHeat={!routeUnavailable}
+              routes={routeUnavailable ? [] : routeOptions}
+              markers={
+                routeUnavailable
+                  ? []
+                  : [
+                      { x: originLocation!.mapX, y: originLocation!.mapY, label: originLocation!.label, color: '#22C55E' },
+                      { x: destinationLocation!.mapX, y: destinationLocation!.mapY, label: destinationLocation!.label, color: '#EF4444' },
+                    ]
+              }
+            />
             <div className="absolute left-5 top-5 flex items-center gap-2">
               <span className="glass rounded-lg px-2.5 py-1 text-[11px] font-medium text-ink-muted">
-                {origin.split('·')[1]?.trim() ?? origin}
+                {origin}
               </span>
               <ArrowRight className="h-3 w-3 text-ink-faint" />
               <span className="glass rounded-lg px-2.5 py-1 text-[11px] font-medium text-ink-muted">
-                {destination.split('·')[1]?.trim() ?? destination}
+                {destination}
               </span>
             </div>
           </div>
 
-          {/* AI reasoning card */}
-          <Reveal>
-            <div className="rounded-2xl border border-white/5 bg-gradient-to-b from-primary/[0.07] to-transparent p-6 backdrop-blur-sm">
+          {routeUnavailable ? (
+            <div className="rounded-2xl border border-white/5 bg-white/5 p-6 text-center text-sm text-ink-muted">
+              <p className="font-semibold text-ink">Location not supported in prototype</p>
+              <p className="mt-2">Please enter one of the supported Delhi NCR locations to see route safety details.</p>
+            </div>
+          ) : active ? (
+            <Reveal>
+              <div className="rounded-2xl border border-white/5 bg-gradient-to-b from-primary/[0.07] to-transparent p-6 backdrop-blur-sm">
               <div className="flex items-center gap-2">
                 <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/15">
                   <Brain className="h-4 w-4 text-primary" />
@@ -230,9 +254,15 @@ export function RoutePlannerPage() {
               </button>
             </div>
           </Reveal>
-        </div>
+        ) : (
+          <div className="rounded-2xl border border-white/5 bg-white/5 p-6 text-center text-sm text-ink-muted">
+            <p className="font-semibold text-ink">Enter both supported locations to see route details.</p>
+            <p className="mt-2">If a location is unsupported, the prototype will show a support notice.</p>
+          </div>
+        )}
       </div>
     </div>
+  </div>
   );
 }
 

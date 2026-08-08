@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { incidents } from '@/data/content';
+import { incidents, type IncidentMarker } from '@/data/content';
 
 /**
  * AnimatedMapCanvas — a stylized, animated dark "safety map" rendered with
@@ -14,12 +14,27 @@ import { incidents } from '@/data/content';
  *  - showHeat:    render the radial heatmap layer.
  *  - className:   sizing / positioning.
  */
+export interface RoutePoint {
+  x: number;
+  y: number;
+}
+
+export interface HighlightMarker {
+  x: number;
+  y: number;
+  label: string;
+  color: string;
+}
+
 interface MapProps {
   interactive?: boolean;
   showRoute?: boolean;
   showHeat?: boolean;
   className?: string;
+  incidents?: IncidentMarker[];
   onSelect?: (id: string) => void;
+  routes?: { path: RoutePoint[]; color: string }[];
+  markers?: HighlightMarker[];
 }
 
 const severityColor: Record<string, string> = {
@@ -51,7 +66,10 @@ export function AnimatedMapCanvas({
   showRoute = true,
   showHeat = true,
   className,
+  incidents: incidentList = incidents,
   onSelect,
+  routes,
+  markers,
 }: MapProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [routeLen, setRouteLen] = useState(0);
@@ -98,7 +116,7 @@ export function AnimatedMapCanvas({
         </g>
 
         {/* Animated route */}
-        {showRoute && (
+        {showRoute && (!routes || routes.length === 0) && (
           <>
             <path
               ref={routeRef}
@@ -132,9 +150,20 @@ export function AnimatedMapCanvas({
             <circle cx="880" cy="80" r="7" fill="#EF4444" />
           </>
         )}
+        {showRoute && routes && routes.length > 0 && (
+          <g>
+            {routes.map((route, index) => {
+              const points = route.path.map((point) => `${(point.x / 100) * 1000},${(point.y / 100) * 700}`).join(' L ');
+              const d = `M ${points}`;
+              return (
+                <path key={route.color + index} d={d} fill="none" stroke={route.color} strokeWidth={index === 0 ? 4 : 2} strokeLinecap="round" opacity={index === 0 ? 1 : 0.55} />
+              );
+            })}
+          </g>
+        )}
 
         {/* Incident markers */}
-        {incidents.map((inc) => {
+        {incidentList.map((inc) => {
           const cx = (inc.x / 100) * 1000;
           const cy = (inc.y / 100) * 700;
           const color = severityColor[inc.severity];
@@ -157,6 +186,18 @@ export function AnimatedMapCanvas({
               {inc.verified && (
                 <circle r="1.4" cx="3.2" cy="-3.2" fill="#0b0b0e" stroke="#22C55E" strokeWidth="1" />
               )}
+            </g>
+          );
+        })}
+        {markers?.map((marker) => {
+          const cx = (marker.x / 100) * 1000;
+          const cy = (marker.y / 100) * 700;
+          return (
+            <g key={`${marker.x}-${marker.y}-${marker.label}`}>
+              <circle cx={cx} cy={cy} r="8" fill={marker.color} opacity="0.9" />
+              <text x={cx} y={cy - 12} textAnchor="middle" fill="white" fontSize="14" fontWeight="600">
+                {marker.label}
+              </text>
             </g>
           );
         })}
