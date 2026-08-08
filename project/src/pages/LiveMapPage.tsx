@@ -16,7 +16,8 @@ import {
 import { type LucideIcon } from 'lucide-react';
 import { RiskBadge, ScoreRing, Eyebrow } from '@/components/ui/Primitives';
 import { AnimatedMapCanvas } from '@/components/AnimatedMapCanvas';
-import { incidents, riskFactors, aiExplanation } from '@/data/content';
+import { getLocationSafety, type LocationAnalysis } from '@/services/safety';
+import { type IncidentMarker } from '@/data/content';
 import { cn } from '@/lib/utils';
 
 const layers = [
@@ -40,9 +41,30 @@ export function LiveMapPage() {
   const [layerState, setLayerState] = useState<Record<string, boolean>>(
     Object.fromEntries(layers.map((l) => [l.id, l.defaultOn])),
   );
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState('Noida');
+  const [analysis, setAnalysis] = useState<LocationAnalysis>(() => getLocationSafety('Noida'));
+  const [searching, setSearching] = useState(false);
 
-  const selectedInc = incidents.find((i) => i.id === selected);
+  const selectedInc = analysis.incidents.find((i) => i.id === selected);
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const filteredIncidents = normalizedQuery
+    ? analysis.incidents.filter((inc) => {
+        return [incidentTypeLabel[inc.type], inc.time, inc.type, inc.id]
+          .some((field) => field.toLowerCase().includes(normalizedQuery));
+      })
+    : analysis.incidents;
+
+  const handleSearch = () => {
+    setSearching(true);
+    setTimeout(() => {
+      setAnalysis(getLocationSafety(query.trim() || 'Delhi'));
+      setSelected(null);
+      setSearching(false);
+    }, 600);
+  };
+
+  const riskLevelLabel = analysis.riskLevel === 'low' ? 'Low risk' : analysis.riskLevel === 'moderate' ? 'Moderate risk' : 'High risk';
 
   return (
     <div className="relative min-h-screen pt-24">
@@ -65,9 +87,16 @@ export function LiveMapPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Search address or area..."
-              className="w-full rounded-full border border-white/10 bg-bg-card py-3 pl-11 pr-4 text-sm text-ink placeholder:text-ink-faint outline-none transition-all focus:border-primary/50 focus:shadow-glow-sm"
+              className="w-full rounded-full border border-white/10 bg-bg-card py-3 pl-11 pr-28 text-sm text-ink placeholder:text-ink-faint outline-none transition-all focus:border-primary/50 focus:shadow-glow-sm"
             />
+            <button
+              onClick={handleSearch}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary/90"
+            >
+              {searching ? 'Analyzing…' : 'Search'}
+            </button>
           </div>
         </div>
       </div>
@@ -82,6 +111,8 @@ export function LiveMapPage() {
               interactive
               showRoute={layerState.route}
               showHeat={layerState.heat}
+              incidents={filteredIncidents}
+              markers={[analysis.mapMarker]}
               onSelect={setSelected}
             />
 
@@ -130,10 +161,12 @@ export function LiveMapPage() {
                 <MapPin className="h-4 w-4 text-primary" />
                 Nearby incidents
               </h3>
-              <span className="text-xs text-ink-faint">{incidents.length} within 1km</span>
+              <span className="text-xs text-ink-faint">
+                {filteredIncidents.length} within 1km{normalizedQuery ? ` · matching "${query.trim()}"` : ''}
+              </span>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {incidents.slice(0, 6).map((inc) => (
+              {filteredIncidents.slice(0, 6).map((inc) => (
                 <button
                   key={inc.id}
                   onClick={() => setSelected(inc.id)}
@@ -163,21 +196,22 @@ export function LiveMapPage() {
           {/* Safety score */}
           <div className="rounded-2xl border border-white/5 glass-card p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-ink">Block Safety Score</h3>
+              <div>
+                <h3 className="text-sm font-semibold text-ink">Location Safety Score</h3>
+                <p className="text-xs text-ink-faint">{analysis.region} · {analysis.estimate ? 'Prototype estimate' : 'Live analysis'}</p>
+              </div>
               <span className="text-xs text-ink-faint">Updated 47s ago</span>
             </div>
             <div className="mt-5 flex items-center gap-6">
-              <ScoreRing score={aiExplanation.score} size={130} />
+              <ScoreRing score={analysis.score} size={130} />
               <div className="flex-1">
-                <RiskBadge level={aiExplanation.score >= 70 ? 'low' : aiExplanation.score >= 45 ? 'moderate' : 'high'}>
-                  {aiExplanation.score >= 70 ? 'Low risk' : aiExplanation.score >= 45 ? 'Moderate risk' : 'High risk'}
-                </RiskBadge>
+                <RiskBadge level={analysis.riskLevel}>{riskLevelLabel}</RiskBadge>
                 <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-                  Lower Manhattan · {aiExplanation.horizon}
+                  {analysis.displayName} · {analysis.horizon}
                 </p>
                 <div className="mt-3 flex items-center gap-2 text-xs">
                   <Brain className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-ink">Confidence {(aiExplanation.confidence * 100).toFixed(0)}%</span>
+                  <span className="text-ink">Confidence {(analysis.confidence * 100).toFixed(0)}%</span>
                 </div>
               </div>
             </div>
@@ -189,23 +223,26 @@ export function LiveMapPage() {
               <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/15">
                 <Brain className="h-4 w-4 text-primary" />
               </div>
-              <h3 className="text-sm font-semibold text-ink">AI Explanation</h3>
+              <div>
+                <h3 className="text-sm font-semibold text-ink">AI Explanation</h3>
+                <p className="text-xs text-ink-faint">Why this area got its score</p>
+              </div>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-ink">{aiExplanation.summary}</p>
+            <p className="mt-4 text-sm leading-relaxed text-ink">{analysis.summary}</p>
 
-            <div className="mt-5 space-y-2.5">
-              {riskFactors.map((f, i) => (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {analysis.factors.map((f) => (
                 <motion.div
                   key={f.id}
                   initial={{ opacity: 0, x: -10 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.06 }}
+                  transition={{ duration: 0.25 }}
                   className="rounded-xl border border-white/5 bg-white/[0.02] p-3"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-ink">{f.label}</span>
-                    <span className="text-[11px] font-semibold text-ink-faint">{Math.round(f.weight * 100)}%</span>
+                    <span className="text-[11px] font-semibold text-ink-faint">{f.value}%</span>
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{f.detail}</p>
                 </motion.div>
@@ -232,6 +269,23 @@ export function LiveMapPage() {
               </div>
             </motion.div>
           )}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-white/5 glass-card p-6"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-ink">Recommendations</h3>
+              <RiskBadge level={analysis.riskLevel}>{analysis.score >= 70 ? 'Safe' : analysis.score >= 45 ? 'Use caution' : 'Avoid if possible'}</RiskBadge>
+            </div>
+            <ul className="mt-4 space-y-3 text-sm text-ink-muted">
+              {analysis.recommendations.map((rec) => (
+                <li key={rec} className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                  {rec}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
         </div>
       </div>
     </div>
