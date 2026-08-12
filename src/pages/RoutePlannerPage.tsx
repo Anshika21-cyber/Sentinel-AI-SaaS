@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Navigation,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Eyebrow, RiskBadge, Reveal } from '@/components/ui/Primitives';
 import { AnimatedMapCanvas } from '@/components/AnimatedMapCanvas';
-import { getRouteLocation, getRouteOptions } from '@/services/safety';
+import { getRouteLocation, getRouteOptions, RouteOption } from '@/services/safety';
 import { cn } from '@/lib/utils';
 
 export function RoutePlannerPage() {
@@ -24,10 +24,21 @@ export function RoutePlannerPage() {
   const [destination, setDestination] = useState('Gurugram');
   const [activeId, setActiveId] = useState('safest');
   const [planning, setPlanning] = useState(false);
+  const [routeOptions, setRouteOptions] = useState<RouteOption[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadRoutes() {
+      setLoading(true);
+      const options = await getRouteOptions(origin, destination);
+      setRouteOptions(options);
+      setLoading(false);
+    }
+    loadRoutes();
+  }, [origin, destination]);
 
   const originLocation = useMemo(() => getRouteLocation(origin), [origin]);
   const destinationLocation = useMemo(() => getRouteLocation(destination), [destination]);
-  const routeOptions = useMemo(() => getRouteOptions(origin, destination), [origin, destination]);
   const originSupported = Boolean(originLocation);
   const destinationSupported = Boolean(destinationLocation);
   const routeUnavailable = !originSupported || !destinationSupported || routeOptions.length === 0;
@@ -72,14 +83,14 @@ export function RoutePlannerPage() {
             </div>
 
             <button onClick={plan} className="mt-6 btn-primary w-full">
-              {planning ? (
+              {planning || loading ? (
                 <>
                   <motion.span
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                     className="inline-block h-4 w-4 rounded-full border-2 border-white/30 border-t-white"
                   />
-                  Calculating safest routes...
+                  {loading ? 'Fetching real data...' : 'Calculating safest routes...'}
                 </>
               ) : (
                 <>
@@ -112,14 +123,16 @@ export function RoutePlannerPage() {
                       : 'border-white/5 glass-card hover:border-white/10',
                   )}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="h-3 w-3 rounded-full" style={{ background: r.color, boxShadow: `0 0 10px ${r.color}` }} />
-                      <span className="text-sm font-semibold text-ink">{r.label}</span>
-                      <span className="chip">{r.badge}</span>
-                    </div>
-                    <RiskBadge level={r.riskLevel}>{r.risk}% risk</RiskBadge>
-                  </div>
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                       <span className="h-3 w-3 rounded-full" style={{ background: r.color, boxShadow: `0 0 10px ${r.color}` }} />
+                       <span className="text-sm font-semibold text-ink">{r.label}</span>
+                       <span className="chip">{r.badge}</span>
+                       {r.isEstimated && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-ink-muted">Estimated</span>}
+                     </div>
+                     <RiskBadge level={r.riskLevel}>{r.risk}% risk</RiskBadge>
+                   </div>
+
 
                   <div className="mt-4 grid grid-cols-3 gap-3">
                     <Metric icon={<RouteIcon className="h-3.5 w-3.5" />} label="Distance" value={r.distance} />
