@@ -3,16 +3,19 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Menu, X, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
-const links = [
+const publicLinks = [{ label: 'About', to: '/about' }];
+const privateLinks = [
+  { label: 'Dashboard', to: '/dashboard' },
   { label: 'Live Map', to: '/map' },
   { label: 'Route Planner', to: '/route' },
   { label: 'Community', to: '/community' },
-  { label: 'Dashboard', to: '/dashboard' },
   { label: 'About', to: '/about' },
 ];
 
 export function Navbar() {
+  const { user, signOut } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const location = useLocation();
@@ -55,7 +58,7 @@ export function Navbar() {
 
         {/* Desktop nav with magnetic active indicator */}
         <nav className="hidden items-center gap-1 lg:flex">
-          {links.map((l) => {
+          {(user ? privateLinks : publicLinks).map((l) => {
             const active = location.pathname === l.to;
             return (
               <Link
@@ -77,14 +80,32 @@ export function Navbar() {
               </Link>
             );
           })}
+
+          {user ? (
+            <div className="ml-3 flex items-center gap-2">
+              <button onClick={() => signOut()} className="rounded-full border px-3 py-1 text-sm font-medium text-ink-muted hover:text-ink">
+                Logout
+              </button>
+              <Link to="/dashboard" className="ml-2 inline-flex items-center rounded-full bg-white/5 px-3 py-2 text-sm font-medium text-ink">
+                Profile
+              </Link>
+            </div>
+          ) : null}
         </nav>
 
         {/* CTA + mobile toggle */}
-        <div className="flex items-center gap-2">
-          <Link to="/map" className="hidden btn-primary md:inline-flex">
-            Try Live Map
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          <div className="flex items-center gap-2">
+          {!user ? (
+            <Link to="/signup" className="hidden btn-primary md:inline-flex">
+              Get Started
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <Link to="/map" className="hidden btn-primary md:inline-flex">
+              Try Live Map
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
           <button
             className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-ink lg:hidden"
             onClick={() => setOpen((o) => !o)}
@@ -106,7 +127,7 @@ export function Navbar() {
             className="mx-auto mt-2 max-w-7xl px-4 lg:hidden"
           >
             <div className="glass-strong rounded-2xl p-3 shadow-soft-lg">
-              {links.map((l, i) => (
+              {(user ? privateLinks : publicLinks).map((l, i) => (
                 <motion.div
                   key={l.to}
                   initial={{ opacity: 0, x: -10 }}
@@ -126,6 +147,15 @@ export function Navbar() {
                   </Link>
                 </motion.div>
               ))}
+              {user ? (
+                <div className="mt-3">
+                  <button onClick={() => signOut()} className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-ink-muted">Logout</button>
+                </div>
+              ) : (
+                <div className="mt-3">
+                  <Link to="/signup" className="btn-primary w-full">Get Started</Link>
+                </div>
+              )}
               <Link to="/map" className="mt-2 btn-primary w-full">
                 Try Live Map
                 <ArrowRight className="h-4 w-4" />

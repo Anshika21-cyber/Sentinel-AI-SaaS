@@ -7,6 +7,10 @@ import { AuroraBackground } from '@/components/AuroraBackground';
 import { ParticleField } from '@/components/ParticleField';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { LandingPage } from '@/pages/LandingPage';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
+const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const SignUpPage = lazy(() => import('@/pages/SignUpPage').then((m) => ({ default: m.SignUpPage })));
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const LiveMapPage = lazy(() => import('@/pages/LiveMapPage').then((m) => ({ default: m.LiveMapPage })));
 const RoutePlannerPage = lazy(() => import('@/pages/RoutePlannerPage').then((m) => ({ default: m.RoutePlannerPage })));
@@ -36,10 +40,12 @@ function AnimatedRoutes() {
         <Suspense fallback={<PageSkeleton />}>
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/map" element={<LiveMapPage />} />
-            <Route path="/route" element={<RoutePlannerPage />} />
-            <Route path="/community" element={<CommunityPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/map" element={<ProtectedRoute><LiveMapPage /></ProtectedRoute>} />
+            <Route path="/route" element={<ProtectedRoute><RoutePlannerPage /></ProtectedRoute>} />
+            <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="*" element={<LandingPage />} />
           </Routes>
@@ -52,6 +58,7 @@ function AnimatedRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <AuthProvider>
       <ScrollToTop />
       <div className="relative min-h-screen bg-bg-base text-ink">
         <AuroraBackground />
@@ -64,6 +71,7 @@ function App() {
           <Footer />
         </div>
       </div>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

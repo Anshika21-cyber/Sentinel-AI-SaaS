@@ -54,7 +54,7 @@ export function groupReportsByArea(reports: ReportItem[]): Record<string, AreaSu
     if (sev === 'moderate') weight = 2;
     else if (sev === 'high' || sev === 'critical') weight = 3;
 
-    const trustScore = Number(r.trustScore ?? r.trust_score ?? 50);
+    const trustScore = Number((r as any).trustScore ?? (r as any).trust_score ?? 50);
 
     areaMap[areaName].counts[sev] += 1;
     areaMap[areaName].totalWeight += weight;

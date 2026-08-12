@@ -39,7 +39,7 @@ export function CommunityPage() {
 
   const fetchReports = async () => {
     const { data, error } = await supabase
-      .from('reports')
+      .from('community_reports')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -51,14 +51,14 @@ export function CommunityPage() {
     if (data) {
       type ReportWithDate = ReportItem & { createdAt: Date };
 
-      const rawReports = data.map((item: any): ReportWithDate => {
+        const rawReports = data.map((item: any): ReportWithDate => {
         const trustScore = item.trust_score ?? item.trustScore ?? 50;
-        const verified = typeof item.verified === 'boolean' ? item.verified : trustScore >= 70;
+        const verified = (item.verification_status === 'verified') ? true : (trustScore >= 70);
         const createdAt = item.created_at ? new Date(item.created_at) : new Date();
 
         return {
           id: item.id ? String(item.id) : Math.random().toString(),
-          title: item.title || '',
+          title: item.title || item.description || '',
           area: item.area || '',
           category: item.category || 'Theft',
           severity: item.severity || 'low',
@@ -67,7 +67,7 @@ export function CommunityPage() {
           time: createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           verified,
           endorsements: item.endorsements ?? 0,
-          photo: item.photo_url || item.photo || 'https://images.pexels.com/photos/2168974/pexels-photo-2168974.jpeg?auto=compress&cs=tinysrgb&w=900',
+          photo: item.photo_url || item.image_url || 'https://images.pexels.com/photos/2168974/pexels-photo-2168974.jpeg?auto=compress&cs=tinysrgb&w=900',
           description: item.description || item.title || '',
           createdAt,
         };
@@ -453,7 +453,7 @@ function UploadModal({ open, onClose, onSuccess }: { open: boolean; onClose: () 
       // 1. Query existing reports in the same area within last 48 hours
       const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
       const { data: existingAreaReports } = await supabase
-        .from('reports')
+        .from('community_reports')
         .select('*')
         .ilike('area', area.trim())
         .gte('created_at', fortyEightHoursAgo);
@@ -481,15 +481,21 @@ function UploadModal({ open, onClose, onSuccess }: { open: boolean; onClose: () 
       const isVerified = computedTrustScore >= 70;
 
       // 4. Insert into database with computed values
-      const { error } = await supabase.from('reports').insert([
+      const { data: currentUserData } = await supabase.auth.getUser();
+      const currentUserId = currentUserData?.user?.id ?? null;
+
+      const { error } = await supabase.from('community_reports').insert([
         {
           title,
+          description: title,
           area,
           category,
           severity,
-          photo_url: photoUrl || '',
+          photo_url: photoUrl || null,
+          image_url: photoUrl || null,
           trust_score: computedTrustScore,
-          verified: isVerified,
+          verification_status: isVerified ? 'verified' : 'pending',
+          user_id: currentUserId,
         },
       ]);
 
