@@ -1,5 +1,7 @@
 import { clamp } from '@/lib/utils';
 import type { IncidentMarker, RiskLevel } from '@/data/content';
+import { supabase } from '@/lib/supabase';
+import { computeAreaRisk } from '@/lib/riskEngine';
 
 export interface SafetyFactor {
   id: string;
@@ -49,6 +51,7 @@ export interface RouteOption {
   footTraffic: number;
   flaggedSegments: number;
   path: RoutePoint[];
+  isEstimated?: boolean;
 }
 
 export interface RouteLocation {
@@ -773,12 +776,91 @@ function normalizeRouteText(value: string) {
   return value.trim().toLowerCase();
 }
 
-export function getRouteOptions(origin: string, destination: string): RouteOption[] {
+export async function getRouteOptions(origin: string, destination: string): Promise<RouteOption[]> {
   const originLocation = findRouteLocation(origin);
   const destinationLocation = findRouteLocation(destination);
   if (!originLocation || !destinationLocation || originLocation.id === destinationLocation.id) {
     return [];
   }
+
+  // 1. Fetch real data (last 48 hours)
+  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const { data: reports, error } = await supabase
+    .from('community_reports')
+    .select('*')
+    .gte('created_at', fortyEightHoursAgo)
+    .order('created_at', { ascending: false });
+
+  // Fallback to static if DB fails
+  if (error || !reports) {
+    console.error('Failed to fetch reports:', error);
+    return getStaticRouteOptions(originLocation, destinationLocation).map(opt => ({
+        ...opt,
+        risk: 0,
+        riskLevel: 'low',
+        isEstimated: true,
+        reasoning: 'Data unavailable: 0% is a placeholder, as real-time safety reports could not be retrieved.'
+    }));
+  }
+
+  // 2. Filter reports by area
+  const minLat = Math.min(originLocation.lat, destinationLocation.lat) - 0.1;
+  const maxLat = Math.max(originLocation.lat, destinationLocation.lat) + 0.1;
+  const minLng = Math.min(originLocation.lng, destinationLocation.lng) - 0.1;
+  const maxLng = Math.max(originLocation.lng, destinationLocation.lng) + 0.1;
+
+  const relevantReports = reports.filter(
+    (r) =>
+      r.latitude >= minLat &&
+      r.latitude <= maxLat &&
+      r.longitude >= minLng &&
+      r.longitude <= maxLng,
+  );
+
+  const riskAnalysis = computeAreaRisk(relevantReports as any);
+  
+  // 3. Construct route options using real or fallback data
+  const staticOptions = getStaticRouteOptions(originLocation, destinationLocation);
+  
+  // Try to find risk data for the route's area (using destination for context)
+  const areaRisk = riskAnalysis.find(ra => ra.area === destinationLocation.displayName) || riskAnalysis[0];
+
+  return staticOptions.map(variant => {
+    if (areaRisk) {
+        // Construct real explanation
+        const severityStr = Object.entries(areaRisk.severityCounts)
+            .filter(([_, count]) => (count as number) > 0)
+            .map(([level, count]) => `${count} ${level} severity`)
+            .join(', ');
+        
+        const reasoning = `${areaRisk.reportCount} reports in this area in the last 48h: ${severityStr || 'no significant issues'}.`;
+
+        // Vary risk per variant
+        let riskModifier = 1.0;
+        if (variant.id === 'safest') riskModifier = 0.75;
+        if (variant.id === 'fastest') riskModifier = 1.1;
+        
+        const adjustedRisk = Math.min(100, Math.max(0, Math.round(areaRisk.score * riskModifier)));
+
+        return {
+            ...variant,
+            risk: adjustedRisk,
+            riskLevel: adjustedRisk >= 55 ? 'high' : adjustedRisk >= 40 ? 'moderate' : 'low',
+            reasoning: reasoning,
+            isEstimated: false
+        };
+    }
+    
+    // Fallback if no real reports
+    return { 
+        ...variant, 
+        isEstimated: true, 
+        reasoning: 'No recent reports in this area.' 
+    };
+  });
+}
+
+function getStaticRouteOptions(originLocation: RouteLocation, destinationLocation: RouteLocation): RouteOption[] {
 
   const routeKey = `${originLocation.id}|${destinationLocation.id}`;
   const seed = getSeed(routeKey);
@@ -842,7 +924,7 @@ export function getRouteOptions(origin: string, destination: string): RouteOptio
   const balancedRisk = clamp(routeRiskBase + 4 - Math.round(crowdScore * 0.04), 18, 60);
   const safestRisk = clamp(routeRiskBase - 10 - Math.round(crowdScore * 0.03) + Math.round(hotspotScore * 0.6), 8, 46);
 
-  const routeVariants: RouteOption[] = [
+  return [
     {
       id: 'safest',
       label: 'Safest Route',
@@ -895,6 +977,4 @@ export function getRouteOptions(origin: string, destination: string): RouteOptio
       path: makeRoutePath(originLocation, destinationLocation, seed + 27, 1.5),
     },
   ];
-
-  return routeVariants;
 }
