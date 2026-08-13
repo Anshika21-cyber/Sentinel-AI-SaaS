@@ -89,6 +89,17 @@ export async function insertCommunityReport(payload: any) {
 	return supabase.from('community_reports').insert([payload]);
 }
 
+export type VerificationStatus = 'pending' | 'verified' | 'rejected';
+
+// Guarded update: only verification_status may change. RLS restricts this to
+// users whose profile role is 'admin' (see "CommunityReports: admin update verification").
+export async function updateReportVerificationStatus(id: string, status: VerificationStatus) {
+	return supabase
+		.from('community_reports')
+		.update({ verification_status: status })
+		.eq('id', id);
+}
+
 export async function uploadReportPhoto(filePath: string, file: File) {
 	return supabase.storage.from('report-photos').upload(filePath, file, { contentType: file.type, upsert: true });
 }

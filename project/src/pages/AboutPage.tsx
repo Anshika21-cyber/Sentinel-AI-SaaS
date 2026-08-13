@@ -25,7 +25,7 @@ const missionPoints = [
   'Make every street predictable — not through surveillance, but through intelligence.',
   'Replace gut-feel routing with a number anyone can audit in ten seconds.',
   'Earn community trust through verification, not anonymity.',
-  'Act before incidents cluster, not after they make the news.',
+  'Surface risk from the reports that signal it — before it makes the news.',
 ];
 
 export function AboutPage() {
@@ -43,7 +43,7 @@ export function AboutPage() {
               We build the layer that lets cities <GradientText>see around corners</GradientText>.
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-muted">
-              Sentinel AI is a predictive safety intelligence platform. We turn scattered signals — incidents, mobility, lighting, weather — into a score you can act on, with the reasoning attached.
+              Sentinel AI is a community-powered safety platform. We turn reports from people on the ground into a transparent area risk score you can act on — with the reasoning attached.
             </p>
           </Reveal>
         </div>
@@ -62,7 +62,7 @@ export function AboutPage() {
                 <h2 className="text-lg font-semibold text-ink">Vision</h2>
               </div>
               <p className="mt-5 text-[15px] leading-relaxed text-ink-muted">
-                A world where no one walks into a dangerous block by accident. Where the safety of a street is as legible as its name on a map — and where the model that flagged it can tell you exactly why.
+                A world where no one walks into a dangerous block by accident. Where the safety of a street is as legible as its name on a map — and where the score that flagged it can tell you exactly why.
               </p>
               <p className="mt-4 text-[15px] leading-relaxed text-ink-muted">
                 We believe predictive safety is a public good. It should be explainable, auditable, and built with the communities it serves — not imposed on them.
@@ -104,10 +104,10 @@ export function AboutPage() {
         <Reveal>
           <Eyebrow>Technology</Eyebrow>
           <h2 className="mt-4 max-w-2xl text-display-md font-semibold tracking-tight text-ink">
-            The stack behind <GradientText>every prediction</GradientText>.
+            The stack behind <GradientText>every score</GradientText>.
           </h2>
           <p className="mt-4 max-w-xl text-ink-muted">
-            Four systems, working in concert — from the graph model that reads the city to the rationale layer that writes the sentence.
+            Four systems, working in concert — from a report on the street to a score you can trace.
           </p>
         </Reveal>
 
@@ -142,19 +142,19 @@ export function AboutPage() {
             </div>
             <div className="relative grid gap-10 lg:grid-cols-2 lg:items-center">
               <div>
-                <Eyebrow>Explainable AI</Eyebrow>
+                <Eyebrow>Transparent scoring</Eyebrow>
                 <h2 className="mt-4 text-display-md font-semibold tracking-tight text-ink">
                   No black boxes. <GradientText>Ever.</GradientText>
                 </h2>
                 <p className="mt-4 text-ink-muted">
-                  A secondary rationale model translates the predictor's gradient attributions into ranked, plain-language drivers. Every score ships with the top three signals that produced it — so a patrol officer, a fleet dispatcher, or a review board can defend the decision without opening a notebook.
+                  Every score is a rule-based blend of report severity, corroboration, reporter trust, and time of day. Those factors are listed right next to the score — so a patrol officer, a fleet dispatcher, or a review board can trace the decision without opening a notebook.
                 </p>
                 <div className="mt-6 space-y-3">
                   {[
-                    'Ranked driver cards with contribution weights',
-                    'Confidence interval on every prediction',
+                    'Ranked factor cards with contribution weights',
+                    'Corroboration and time-of-day signals',
                     'Plain-language rationale under 60 words',
-                    'Full audit trail retained for 90 days',
+                    'Every factor traceable to a report',
                   ].map((p) => (
                     <div key={p} className="flex items-center gap-2.5 text-sm text-ink">
                       <CheckCircle2 className="h-4 w-4 text-success" />
@@ -168,23 +168,23 @@ export function AboutPage() {
               <div className="rounded-2xl border border-white/10 bg-bg-elev/60 p-6 backdrop-blur">
                 <div className="flex items-center gap-2">
                   <BrainCircuit className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-semibold text-ink">Sample prediction</span>
-                  <span className="ml-auto text-xs text-ink-faint">6h forecast</span>
+                  <span className="text-sm font-semibold text-ink">Sample area score</span>
+                  <span className="ml-auto text-xs text-ink-faint">Tonight</span>
                 </div>
                 <div className="mt-4 rounded-xl bg-danger/10 p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase tracking-wider text-danger">High risk · score 38</span>
-                    <span className="text-xs text-ink-faint">Confidence 91%</span>
+                    <span className="text-xs text-ink-faint">4 reports · 2 corroborated</span>
                   </div>
                   <p className="mt-2 text-sm leading-relaxed text-ink">
-                    Three recent incidents, a streetlight outage, and a sharp drop in foot traffic after 11pm combine to raise predicted risk by 41% vs. baseline.
+                    Three recent reports in this area, two of them corroborated, plus a late-night time boost, combine to raise the score 41% above daytime baseline.
                   </p>
                 </div>
                 <div className="mt-4 space-y-2.5">
                   {[
-                    { l: 'Incident clustering', v: 31 },
-                    { l: 'Footfall collapse', v: 27 },
-                    { l: 'Lighting gap', v: 18 },
+                    { l: 'Report severity load', v: 31 },
+                    { l: 'Late-night time boost', v: 27 },
+                    { l: 'Reporter trust', v: 18 },
                   ].map((d, i) => (
                     <div key={d.l}>
                       <div className="flex justify-between text-xs">

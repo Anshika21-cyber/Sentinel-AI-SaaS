@@ -13,12 +13,19 @@ const privateLinks = [
   { label: 'Community', to: '/community' },
   { label: 'About', to: '/about' },
 ];
+const adminLinks = [{ label: 'Admin', to: '/admin' }];
 
 export function Navbar() {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const location = useLocation();
+
+  const links = user
+    ? profile?.role === 'admin'
+      ? [...privateLinks, ...adminLinks]
+      : privateLinks
+    : publicLinks;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -58,7 +65,7 @@ export function Navbar() {
 
         {/* Desktop nav with magnetic active indicator */}
         <nav className="hidden items-center gap-1 lg:flex">
-          {(user ? privateLinks : publicLinks).map((l) => {
+          {links.map((l) => {
             const active = location.pathname === l.to;
             return (
               <Link
@@ -127,7 +134,7 @@ export function Navbar() {
             className="mx-auto mt-2 max-w-7xl px-4 lg:hidden"
           >
             <div className="glass-strong rounded-2xl p-3 shadow-soft-lg">
-              {(user ? privateLinks : publicLinks).map((l, i) => (
+              {links.map((l, i) => (
                 <motion.div
                   key={l.to}
                   initial={{ opacity: 0, x: -10 }}

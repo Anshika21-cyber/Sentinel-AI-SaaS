@@ -7,7 +7,7 @@ import { AuroraBackground } from '@/components/AuroraBackground';
 import { ParticleField } from '@/components/ParticleField';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { LandingPage } from '@/pages/LandingPage';
-import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import { AuthProvider } from '@/hooks/useAuth';
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import('@/pages/SignUpPage').then((m) => ({ default: m.SignUpPage })));
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -17,6 +17,7 @@ const RoutePlannerPage = lazy(() => import('@/pages/RoutePlannerPage').then((m) 
 const CommunityPage = lazy(() => import('@/pages/CommunityPage').then((m) => ({ default: m.CommunityPage })));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const AboutPage = lazy(() => import('@/pages/AboutPage').then((m) => ({ default: m.AboutPage })));
+const AdminPage = lazy(() => import('@/pages/AdminPage').then((m) => ({ default: m.AdminPage })));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -47,6 +48,7 @@ function AnimatedRoutes() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
             <Route path="*" element={<LandingPage />} />
           </Routes>
         </Suspense>

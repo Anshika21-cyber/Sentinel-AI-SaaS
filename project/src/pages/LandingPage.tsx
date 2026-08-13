@@ -83,7 +83,7 @@ function Hero() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
               </span>
-              Live in 312 cities
+              Community-powered safety
             </span>
           </motion.div>
 
@@ -104,7 +104,7 @@ function Hero() {
             transition={{ duration: 0.85, delay: 0.16, ease: EASE }}
             className="mt-6 max-w-xl text-lg leading-relaxed text-ink-muted"
           >
-            Sentinel AI predicts unsafe locations before incidents occur using explainable AI and real-time safety intelligence.
+            Sentinel AI turns community safety reports into a transparent area risk score — every factor traceable, nothing black-box.
           </motion.p>
 
           <motion.div
@@ -139,7 +139,7 @@ function Hero() {
             </div>
             <div className="hidden items-center gap-2 sm:flex">
               <CheckCircle2 className="h-4 w-4 text-success" />
-              90-second refresh
+              Trust-weighted scoring
             </div>
           </motion.div>
         </div>
@@ -203,7 +203,7 @@ function TiltMap() {
               <Activity className="h-4 w-4 text-danger" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-ink">Risk spike detected</p>
+              <p className="text-xs font-semibold text-ink">Report corroborated</p>
               <p className="text-[11px] text-ink-faint">Mill Rd · Junction 7</p>
             </div>
           </div>
@@ -215,8 +215,8 @@ function TiltMap() {
               <ShieldCheck className="h-4 w-4 text-success" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-ink">Route rerouted</p>
-              <p className="text-[11px] text-ink-faint">Risk cut by 73%</p>
+              <p className="text-xs font-semibold text-ink">Area risk updated</p>
+              <p className="text-[11px] text-ink-faint">Scored from 4 live reports</p>
             </div>
           </div>
         </FloatingCard>
@@ -227,8 +227,8 @@ function TiltMap() {
               <Brain className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-ink">AI confidence 94.3%</p>
-              <p className="text-[11px] text-ink-faint">6h forecast horizon</p>
+              <p className="text-xs font-semibold text-ink">Trust-weighted score</p>
+              <p className="text-[11px] text-ink-faint">Reporter reputation × corroboration</p>
             </div>
           </div>
         </FloatingCard>
@@ -293,10 +293,10 @@ function Features() {
       <Reveal>
         <Eyebrow>Capabilities</Eyebrow>
         <h2 className="mt-4 max-w-2xl text-display-lg font-semibold tracking-tight text-ink">
-          Six systems working as <GradientText>one intelligence</GradientText>.
+          One transparent score, <GradientText>built from real reports</GradientText>.
         </h2>
         <p className="mt-4 max-w-xl text-ink-muted">
-          Each layer feeds the next — from raw signals on the street to a number you can act on, with the reasoning attached.
+          Every layer is traceable — from a report on the street to a score you can act on, with the reasoning attached.
         </p>
       </Reveal>
 
@@ -330,12 +330,12 @@ function MapPreview() {
     <Section>
       <div className="grid gap-10 lg:grid-cols-[1fr_1.3fr] lg:items-center">
         <Reveal>
-          <Eyebrow>Explainable AI</Eyebrow>
+          <Eyebrow>Transparent scoring</Eyebrow>
           <h2 className="mt-4 text-display-md font-semibold tracking-tight text-ink">
             Every score comes with <GradientText>the why</GradientText>.
           </h2>
           <p className="mt-4 text-ink-muted">
-            No black boxes. Tap any block and Sentinel shows the top signals driving the prediction — ranked, weighted, and written in plain language.
+            No black boxes. Pick any area and Sentinel shows the factors behind its score — report severity, corroboration, trust, and time of day — ranked and written in plain language.
           </p>
 
           <div className="mt-8 space-y-3">
@@ -422,7 +422,7 @@ function FAQ() {
           <Eyebrow>FAQ</Eyebrow>
           <h2 className="mt-4 text-display-md font-semibold tracking-tight text-ink">Questions, answered.</h2>
           <p className="mt-4 text-ink-muted">
-            Everything you'd want to know before trusting an AI with a routing decision.
+            Everything you'd want to know before trusting a safety score with your route.
           </p>
         </Reveal>
 
@@ -488,7 +488,7 @@ function CTA() {
               See your city the way <GradientText>Sentinel sees it</GradientText>.
             </h2>
             <p className="mx-auto mt-4 max-w-md text-ink-muted">
-              Open the live map, drop a pin, and watch the model explain a block in real time.
+              Open the live map, pick an area, and see the reports behind its score.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link to="/map">

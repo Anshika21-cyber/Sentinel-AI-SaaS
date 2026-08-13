@@ -58,49 +58,49 @@ export interface Hotspot {
 // --- Landing stats ----------------------------------------------------------
 
 export const heroStats = [
-  { label: 'Locations mapped', value: 1.2, suffix: 'M+', decimals: 1 },
-  { label: 'Predictions / day', value: 847, suffix: 'K', decimals: 0 },
-  { label: 'Avg. accuracy', value: 94.3, suffix: '%', decimals: 1 },
-  { label: 'Cities live', value: 312, suffix: '', decimals: 0 },
+  { label: 'Reports analyzed', value: 12.4, suffix: 'K', decimals: 1 },
+  { label: 'Reports verified', value: 68, suffix: '%', decimals: 0 },
+  { label: 'Avg. trust score', value: 74, suffix: '', decimals: 0 },
+  { label: 'Areas monitored', value: 96, suffix: '', decimals: 0 },
 ];
 
 // --- Features ---------------------------------------------------------------
 
 export const features = [
   {
-    icon: 'Dna',
-    title: 'Dynamic Safety DNA',
-    desc: 'Every street gets a living fingerprint — fusing time, weather, footfall, and incident history into a score that updates every 90 seconds.',
-    accent: 'from-blue-500/20 to-blue-500/0',
+    icon: 'Users',
+    title: 'Community Trust Engine',
+    desc: 'Reports weighted by trust score and corroboration. One verified reporter outweighs a hundred anonymous flags.',
+    accent: 'from-amber-500/20 to-amber-500/0',
   },
   {
     icon: 'MapPin',
-    title: 'Hyperlocal Risk Detection',
-    desc: 'Block-level resolution. Sentinel reads the difference between two sides of the same avenue and warns you before the gap matters.',
+    title: 'Area Risk Scoring',
+    desc: 'Reports are grouped by area and severity, weighted, and ranked — so the most-corroborated areas surface first.',
     accent: 'from-cyan-500/20 to-cyan-500/0',
   },
   {
     icon: 'Sparkles',
-    title: 'Explainable AI',
-    desc: 'No black boxes. Every prediction ships with a human-readable rationale — the top three signals that drove the model, ranked.',
+    title: 'Time-Aware Risk',
+    desc: 'A consistent time-of-day multiplier raises the risk signal late at night and lowers it during the day.',
     accent: 'from-emerald-500/20 to-emerald-500/0',
   },
   {
     icon: 'Route',
-    title: 'Safe Route Recommendation',
-    desc: 'The fastest path isn\'t always the smartest. Sentinel balances minutes against risk to find the route you\'d actually choose.',
+    title: 'Report-Driven Routes',
+    desc: 'Route options are adjusted against reported risk in the area — minutes balanced against what people have flagged.',
     accent: 'from-blue-500/20 to-blue-500/0',
   },
   {
-    icon: 'Users',
-    title: 'Community Trust Engine',
-    desc: 'Reports weighted by verified reputation, not volume. One trusted local outweighs a hundred anonymous flags.',
-    accent: 'from-amber-500/20 to-amber-500/0',
+    icon: 'Dna',
+    title: 'Corroboration Bonuses',
+    desc: 'Matching reports from separate people in the same area earn a trust bonus, so patterns surface — not noise.',
+    accent: 'from-blue-500/20 to-blue-500/0',
   },
   {
-    icon: 'BrainCircuit',
-    title: 'Predictive Safety Intelligence',
-    desc: 'A temporal graph neural network forecasts hotspots up to 6 hours ahead — so cities act before incidents, not after.',
+    icon: 'Brain',
+    title: 'Transparent Scoring',
+    desc: 'No black box. Every score is built from reports, severity, trust, and time of day — traceable in seconds.',
     accent: 'from-cyan-500/20 to-cyan-500/0',
   },
 ];
@@ -142,28 +142,28 @@ export const testimonials = [
 
 export const faqs = [
   {
-    q: 'How does Sentinel predict incidents before they happen?',
-    a: 'We train a temporal graph neural network on five years of anonymized incident, mobility, lighting, and weather data. The model learns the precursors — the quiet signals that precede a cluster — and emits a probability surface that refreshes every 90 seconds.',
+    q: 'How does Sentinel score an area?',
+    a: 'We score from community reports. Reports are grouped by area and severity, weighted by the reporter\'s trust score, and given a bonus when separate people corroborate them. A time-of-day multiplier then adjusts the score for day or night. No ML model — every factor is traceable.',
   },
   {
-    q: 'Is the AI explainable? Can I audit a prediction?',
-    a: 'Yes. Every score is paired with an explanation card listing the top contributing factors, their weights, and a plain-language rationale. No prediction ships without a reason you can read in under ten seconds.',
+    q: 'Can I audit a score?',
+    a: 'Yes. Every score is built from report count, severity, corroboration, trust, and time of day, and those factors are shown next to the score. You can read the reasoning in under ten seconds.',
   },
   {
     q: 'Where does the community report data come from?',
-    a: 'Verified users submit reports through the app. Each report carries the reporter\'s trust score, earned through endorsements and accuracy over time. Anonymous reports are deprioritized, never amplified.',
+    a: 'Verified users submit reports through the app. Each report carries the reporter\'s trust score, earned through corroboration and endorsements over time. Anonymous reports are deprioritized, never amplified.',
   },
   {
     q: 'Does Sentinel share or sell personal location data?',
-    a: 'Never. Location is processed ephemerally to compute a score, then discarded. We publish a public data handling policy and undergo annual third-party audits.',
+    a: 'Never. Report data is used only to compute safety scores for the community. We publish a public data handling policy.',
   },
   {
     q: 'Can I integrate Sentinel into my own platform?',
-    a: 'Yes — a REST and streaming API is available on the Scale plan, returning scores, explanations, and route recommendations as JSON or Server-Sent Events.',
+    a: 'Data flows through the Supabase API that powers the app today. Public, documented read endpoints are on the roadmap as coverage grows.',
   },
   {
-    q: 'Which cities are currently live?',
-    a: '312 metros across North America, Europe, and parts of APAC. Coverage expands monthly; the Live Map shows the active boundary for any queried region.',
+    q: 'Where is Sentinel live?',
+    a: 'Sentinel is live wherever the community is reporting. The live map and community feed show every active area in real time.',
   },
 ];
 
@@ -191,13 +191,12 @@ export const riskFactors: RiskFactor[] = [
 export const aiExplanation = {
   score: 38,
   summary:
-    'This block scores low tonight. Three recent incidents, a streetlight outage, and a sharp drop in foot traffic after 11pm combine to raise predicted risk by 41% versus the neighborhood baseline.',
-  confidence: 0.91,
-  horizon: '6h forecast',
+    'This area\'s score is built from its reports and the time of day. Three recent reports, two corroborated, plus a late-night boost — every factor is traceable.',
   drivers: [
-    { label: 'Incident clustering', contribution: 31 },
-    { label: 'Footfall collapse', contribution: 27 },
-    { label: 'Lighting gap', contribution: 18 },
+    { label: 'Report severity load', contribution: 42 },
+    { label: 'Corroborated reports', contribution: 28 },
+    { label: 'Reporter trust', contribution: 18 },
+    { label: 'Late-night time boost', contribution: 12 },
   ],
 };
 
@@ -401,19 +400,19 @@ export const team = [
   {
     name: 'Elena Vasquez',
     role: 'Co-founder & CEO',
-    bio: 'Former lead of urban analytics at a national transit authority. Built the first citywide incident-forecasting grid in production.',
+    bio: 'Former lead of urban analytics at a national transit authority. Built Sentinel\'s community-report and scoring pipeline.',
     avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop',
   },
   {
     name: 'Rohan Mehta',
     role: 'Co-founder & CTO',
-    bio: 'Ex-OpenAI research engineer. Designed the temporal graph architecture at the core of Sentinel\'s prediction engine.',
+    bio: 'Ex-OpenAI research engineer. Led the design of Sentinel\'s rule-based risk engine and data layer.',
     avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop',
   },
   {
     name: 'Lina Park',
     role: 'Head of Explainability',
-    bio: 'PhD in interpretable ML. Wrote the rationale layer that turns model gradients into sentences a patrol officer can act on.',
+    bio: 'PhD in interpretable ML. Designed the factor breakdowns that make every score auditable in seconds.',
     avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop',
   },
   {
@@ -426,23 +425,23 @@ export const team = [
 
 export const aboutTech = [
   {
-    icon: 'BrainCircuit',
-    title: 'Temporal Graph Neural Network',
-    desc: 'Street segments are nodes; movement, time, and incident history are edges. The model learns how risk propagates through a city\'s topology.',
-  },
-  {
-    icon: 'Sparkles',
-    title: 'Rationale Layer',
-    desc: 'A secondary model translates gradient attributions into ranked, plain-language drivers — the "why" behind every score.',
-  },
-  {
     icon: 'ShieldCheck',
-    title: 'Federated Trust Scoring',
-    desc: 'Community reports are weighted by per-user reputation earned through verified accuracy, not raw submission volume.',
+    title: 'Community Trust Scoring',
+    desc: 'Reports carry a trust score, and matching reports from separate people in the same area within 48 hours earn a corroboration bonus.',
   },
   {
     icon: 'Gauge',
-    title: '90-Second Refresh',
-    desc: 'Inference re-runs every 90 seconds against live mobility and incident streams, so the map you see is never more than a minute stale.',
+    title: 'Area Risk Engine',
+    desc: 'Reports are grouped by area and severity, weighted, and ranked so the most-corroborated areas surface first.',
+  },
+  {
+    icon: 'Sparkles',
+    title: 'Time-of-Day Multiplier',
+    desc: 'A heuristic raises the risk signal late at night and lowers it by day — applied consistently and transparently.',
+  },
+  {
+    icon: 'BrainCircuit',
+    title: 'Transparent Reasoning',
+    desc: 'Every score lists the factors that produced it — report count, severity, trust, and time — so anyone can audit it in seconds.',
   },
 ];

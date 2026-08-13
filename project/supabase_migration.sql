@@ -138,7 +138,31 @@ CREATE POLICY IF NOT EXISTS "CommunityReports: update own restricted" ON public.
 CREATE POLICY IF NOT EXISTS "CommunityReports: delete own" ON public.community_reports
   FOR DELETE USING ( auth.uid() = user_id );
 
--- Note: Administrators or backend processes using the service_role key bypass RLS and can update verification_status/trust_score.
+-- Allow users whose profile role is 'admin' to UPDATE verification_status on any report.
+-- RLS policies are OR-combined for UPDATE: the admin USING/WITH CHECK pair below lets an
+-- admin update any row, while the "update own restricted" policy above still blocks regular
+-- users from changing verification_status or trust_score on their own reports.
+CREATE POLICY IF NOT EXISTS "CommunityReports: admin update verification" ON public.community_reports
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+    AND verification_status IN ('pending','verified','rejected')
+  );
+
+-- To make a user an admin (run once):
+-- UPDATE public.profiles SET role = 'admin' WHERE email = 'you@example.com';
+
+-- Note: Administrators or backend processes using the service_role key bypass RLS and can
+-- update verification_status/trust_score directly.
 
 -- 7) Storage bucket for report images
 -- Attempt to create a public bucket named 'report-photos'. If the storage extension is available, this will create the bucket.
